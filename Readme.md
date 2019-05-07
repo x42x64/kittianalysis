@@ -8,20 +8,20 @@ This is a small collection of scripts (python and shell) to analyse the KITTI 3D
 
 ## Prerequisites & install
 In order to install the prerequisites for this analysis, run
-'''
+```
 pip3 install -r requirements.txt
-'''
+```
 
 In order to run the jupyter notebook, additionally, jupyter needs to be installed:
-'''
+```
 pip3 install jupyter
-'''
+```
 
 To enable the Google Maps view, run following commands:
-'''
+```
 jupyter nbextension enable --py --sys-prefix widgetsnbextension
 jupyter nbextension enable --py --sys-prefix gmaps
-'''
+```
 
 Then 2 things need to be obtained:
 * The base URL for the KITTI dataset: replace <YOURBASEURL_HERE> by the proper URL in `get_kitti_data_corpus.sh`
