@@ -1,7 +1,7 @@
 # Analysis tools and helpers for the KITTI 3D Object Detection Dataset
 
 This is a small collection of scripts (python and shell) to analyse the KITTI 3D Object Detection Dataset.
-* kitti_reader.py: Python3 module to read the dataset into a Python dictionary
+* kitti_reader.py: Python3 module to read the dataset into a Python dictionary and enrich the data with information from the KITTI raw dataset
 * plot_helpers.py: Python3 module with helper functions to plot data specifically for this dataset
 * get_kitti_data_corpus.sh: Bash script to download all required KITTI data for this analysis
 * report.ipynb: Jupyter notebook with an initial analysis of the dataset
