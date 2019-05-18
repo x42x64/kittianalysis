@@ -107,9 +107,9 @@ class KITTIFrameReader:
                           (for details see read_all_frames)
 
         """
-        detections_path = f"{self.basepath}/training/label_2/{frame_id}.txt"
+        detections_path = "{}/training/label_2/{}.txt".format(self.basepath, frame_id)
         detections = self._get_detections(detections_path)
-        image_path = f"{self.basepath}/training/image_2/{frame_id}.{image_ext}"
+        image_path = "{}/training/image_2/{}.{}".format(self.basepath, frame_id, image_ext)
         image_width, image_height = self._image_dimensions(image_path)
         return {
                 'id': frame_id,
@@ -129,7 +129,7 @@ class KITTIFrameReader:
 
         """
 
-        path = f"{self.basepath}/training/label_2/"
+        path = "{}/training/label_2/".format(self.basepath)
         return [os.path.splitext(os.path.basename(f))[0] for f in glob.glob(os.path.join(path, "*.txt"))]
 
     def _find_image_ext(self, image_id):
@@ -143,10 +143,10 @@ class KITTIFrameReader:
 
         """
         for image_ext in ['png', 'jpg']:
-            if os.path.exists(f"{self.basepath}/training/image_2/{image_id}.{image_ext}"):
+            if os.path.exists("{}/training/image_2/{}.{}".format(self.basepath, image_id, image_ext)):
                 return image_ext
 
-        raise Exception(f"could not find jpg or png for {image_id} at {root}/image_2")
+        raise Exception("could not find jpg or png for {} at {}/training/image_2".format(image_id, self.basepath))
 
     @staticmethod
     def _get_detections(detections_path):
@@ -226,7 +226,7 @@ class KITTIFrameReader:
         ]
         for subdir in expected_dirs:
             if not os.path.isdir(os.path.join(basepath, subdir)):
-                print( f"Expected subdirectory {subdir} within {path}")
+                print( "Expected subdirectory {} within {}".format(subdir, basepath))
                 return False
 
         return True
