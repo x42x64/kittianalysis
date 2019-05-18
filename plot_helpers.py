@@ -5,6 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.patches as patches
+import mpl_toolkits.mplot3d.art3d as art3d
+
 import kitti_reader
 from PIL import Image
 from matplotlib.collections import PatchCollection
@@ -220,6 +222,20 @@ def plot_lidar_in_image(ax, points, calib, img_width, img_height, point_size=8):
 
     ax.scatter(points_2d[0,idx], points_2d[1,idx], s=point_size, c=reflectivity[idx], alpha=0.7)
 
+def plot_lidar_in_3d(ax, points, point_size=8, subsample=16):
+    """
+
+    Args:
+        ax:
+        points:
+        point_size:
+        subsample:
+
+    Returns:
+
+    """
+    points = points[0::4,:subsample]
+    ax.scatter(points[:,0], points[:,1], points[:,2], s=point_size, c=points[:,3], alpha=0.6)
 
 def plot_info(ax, detection):
     """
@@ -279,6 +295,47 @@ def plot_frame_2d(ax, frame, show_image=True, show_2d=True, show_3d=False, show_
                 plot_3d_bbox_in_image(ax, d, frame['calibration'], fill=show_image)
 
     return ax
+
+def plot_3d_bbox_in_3d(ax, detection, calib, fill=False):
+    # 3d corners of bounding box
+    corners_3d_cam = create_3d_bbox(detection)
+
+    # 3d corners transformed to velodyne coordinate system
+    corners_3d_ext = np.vstack((corners_3d_cam, np.ones((corners_3d_cam.shape[-1]))))
+    corners_3d_velo = np.linalg.inv(calib['Tr_velo_to_cam']).dot(corners_3d_ext)
+    corners_3d_velo = corners_3d_velo[:3, :] / corners_3d_velo[3]
+
+    faces = [
+        [0, 1, 4, 5],
+        [1, 2, 3, 4],
+        [2, 3, 6, 7],
+        [6, 7, 0, 5],
+        [3, 4, 5, 6],
+        [0, 1, 2, 7]
+    ]
+
+    for f in faces:
+        pc = art3d.Poly3DCollection([list(zip(corners_3d_velo[0, f],corners_3d_velo[1, f],corners_3d_velo[2, f]))])
+        pc.set_alpha(0.2)
+        pc.set_facecolor(colormap[detection['label']])
+
+        ax.add_collection3d(pc)
+
+
+def plot_frame_3d(ax, frame, show_3d=True, show_lidar=True, show_info=True):
+
+
+    if show_lidar:
+        lidar = kitti_reader.KITTIFrameReader.get_velodyne(frame)
+        plot_lidar_in_3d(ax, lidar, subsample=100, point_size=2)
+
+    for d in frame['detections']:
+        if show_3d:
+            if d['label'] != 'DontCare':
+                plot_3d_bbox_in_3d(ax, d, frame['calibration'])
+
+    ax.auto_scale_xyz([-80, 80], [-80, 80], [-80, 80])
+
 
 
 def crop_detection(img_path, detection):
