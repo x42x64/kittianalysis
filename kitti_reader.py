@@ -220,7 +220,9 @@ class KITTIFrameReader:
         """
         expected_dirs = [
             'training/image_2',
-            'training/label_2'
+            'training/label_2',
+            'training/velodyne',
+            'training/calib'
         ]
         for subdir in expected_dirs:
             if not os.path.isdir(os.path.join(basepath, subdir)):
@@ -228,6 +230,64 @@ class KITTIFrameReader:
                 return False
 
         return True
+
+
+    @staticmethod
+    def _sanity_structure(basepath):
+        """Checks if the given path contains the required folder structure and all required raw data
+
+        Args:
+            basepath (string): The path which should be checked for the folder structure
+
+        Returns:
+            bool: True if the given path satisfies the required folder structure, false otherwise.
+
+        """
+        expected_dirs = [
+            'training/image_2',
+            'training/label_2',
+            'training/velodyne',
+            'training/calib'
+        ]
+        for subdir in expected_dirs:
+            if not os.path.isdir(os.path.join(basepath, subdir)):
+                print("Expected subdirectory {subdir} within {basepath}")
+                return False
+
+        # get ids for all data as lists of strings
+        img_ids = [os.path.splitext(os.path.basename(f))[0] for
+                   f in glob.glob(os.path.join(basepath, "training", "image_2", "*.png"))]
+
+        lab_ids = [os.path.splitext(os.path.basename(f))[0] for
+                   f in glob.glob(os.path.join(basepath, "training", "label_2", "*.txt"))]
+
+        lidar_ids = [os.path.splitext(os.path.basename(f))[0] for
+                   f in glob.glob(os.path.join(basepath, "training", "velodyne", "*.bin"))]
+
+        calib_ids = [os.path.splitext(os.path.basename(f))[0] for
+                   f in glob.glob(os.path.join(basepath, "training", "calib", "*.txt"))]
+
+        # check all against the label ids (= is there data for each label)
+        missing_img   = [id for id in img_ids if id not in lab_ids]
+        missing_lidar = [id for id in lidar_ids if id not in lab_ids]
+        missing_calib = [id for id in calib_ids if id not in lab_ids]
+
+        if missing_img:
+            print("Missing following image ids in dataset: {}".format(missing_img))
+
+        if missing_lidar:
+            print("Missing following lidar ids in dataset: {}".format(missing_lidar))
+
+        if missing_calib:
+            print("Missing following calibration ids in dataset: {}".format(missing_calib))
+
+        # return false if there are any missing datasets
+        if missing_img or missing_lidar or missing_calib:
+            return False
+
+        return True
+
+
 
 
 class KITTIRawEnhancer():
