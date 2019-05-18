@@ -10,6 +10,7 @@ with information from 3rd party data sources.
 
 import csv
 import glob
+import numpy as np
 import os
 import pykitti
 from PIL import Image
@@ -91,6 +92,8 @@ class KITTIFrameReader:
     def read_frame(self, frame_id, image_ext='png'):
         frame = dict()
         frame['image'], frame['detections'] = self._get_image_detection(frame_id, image_ext)
+        frame['calibration'] = self._get_calibration(frame_id)
+        frame['velodyne'] = {'path': os.path.join(self.basepath, 'training', 'velodyne', frame_id + '.bin')}
         return frame
 
     def _get_image_detection(self, frame_id, image_ext='png'):
@@ -231,63 +234,42 @@ class KITTIFrameReader:
 
         return True
 
+    def _get_calibration(self, frame_id):
+
+        # extract calibration data from txt file
+        fn = os.path.join(self.basepath, "training", "calib", frame_id + '.txt')
+        cal_raw = {}
+        with open(fn, 'r') as f:
+            for line in f.readlines():
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    cal_raw[key] = np.array([float(x) for x in value.split()])
+
+        cdata = dict()
+        # expand to a 4x4 matrix
+        cdata['Tr_velo_to_cam'] = np.zeros((4, 4))
+        cdata['Tr_velo_to_cam'][3, 3] = 1
+        cdata['Tr_velo_to_cam'][:3, :4] = cal_raw['Tr_velo_to_cam'].reshape(3, 4)
+
+        # expand to a 4x4 matrix
+        cdata['Tr_imu_to_velo'] = np.zeros((4, 4))
+        cdata['Tr_imu_to_velo'][3, 3] = 1
+        cdata['Tr_imu_to_velo'][:3, :4] = cal_raw['Tr_imu_to_velo'].reshape(3, 4)
+
+        # expand to a 4x4 matrix
+        cdata['R0_rect'] = np.zeros((4, 4))
+        cdata['R0_rect'][3, 3] = 1
+        cdata['R0_rect'][:3, :3] = cal_raw['R0_rect'].reshape(3, 3)
+
+        # reshape to a 3x4 matrix
+        for k in ['P0', 'P1', 'P2', 'P3']:
+            cdata[k] = cal_raw[k].reshape(3,4)
+
+        return cdata
 
     @staticmethod
-    def _sanity_structure(basepath):
-        """Checks if the given path contains the required folder structure and all required raw data
-
-        Args:
-            basepath (string): The path which should be checked for the folder structure
-
-        Returns:
-            bool: True if the given path satisfies the required folder structure, false otherwise.
-
-        """
-        expected_dirs = [
-            'training/image_2',
-            'training/label_2',
-            'training/velodyne',
-            'training/calib'
-        ]
-        for subdir in expected_dirs:
-            if not os.path.isdir(os.path.join(basepath, subdir)):
-                print("Expected subdirectory {subdir} within {basepath}")
-                return False
-
-        # get ids for all data as lists of strings
-        img_ids = [os.path.splitext(os.path.basename(f))[0] for
-                   f in glob.glob(os.path.join(basepath, "training", "image_2", "*.png"))]
-
-        lab_ids = [os.path.splitext(os.path.basename(f))[0] for
-                   f in glob.glob(os.path.join(basepath, "training", "label_2", "*.txt"))]
-
-        lidar_ids = [os.path.splitext(os.path.basename(f))[0] for
-                   f in glob.glob(os.path.join(basepath, "training", "velodyne", "*.bin"))]
-
-        calib_ids = [os.path.splitext(os.path.basename(f))[0] for
-                   f in glob.glob(os.path.join(basepath, "training", "calib", "*.txt"))]
-
-        # check all against the label ids (= is there data for each label)
-        missing_img   = [id for id in img_ids if id not in lab_ids]
-        missing_lidar = [id for id in lidar_ids if id not in lab_ids]
-        missing_calib = [id for id in calib_ids if id not in lab_ids]
-
-        if missing_img:
-            print("Missing following image ids in dataset: {}".format(missing_img))
-
-        if missing_lidar:
-            print("Missing following lidar ids in dataset: {}".format(missing_lidar))
-
-        if missing_calib:
-            print("Missing following calibration ids in dataset: {}".format(missing_calib))
-
-        # return false if there are any missing datasets
-        if missing_img or missing_lidar or missing_calib:
-            return False
-
-        return True
-
-
+    def get_velodyne(frame):
+        return np.fromfile(frame['velodyne']['path'], dtype=np.float32).reshape(-1, 4)
 
 
 class KITTIRawEnhancer():
