@@ -8,6 +8,7 @@ with information from 3rd party data sources.
 
 """
 
+import copy
 import csv
 import glob
 import numpy as np
@@ -270,6 +271,23 @@ class KITTIFrameReader:
     @staticmethod
     def get_velodyne(frame):
         return np.fromfile(frame['velodyne']['path'], dtype=np.float32).reshape(-1, 4)
+
+    @staticmethod
+    def create_new_frame_from_detections(org_frame, detections):
+        """
+        Creates a new frame dictionary only containing the specified detections
+        Args:
+            org_frame: frame dictionary
+            detections: list of detection dictionaries
+
+        Returns:
+            a copy of org_frame, but only with the detections specified in detections
+
+        """
+        new_frame = copy.deepcopy(org_frame)
+        new_frame['detections'] = detections
+
+        return new_frame
 
 
 class KITTIRawEnhancer():
