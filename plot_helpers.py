@@ -152,7 +152,9 @@ def create_3d_bbox(detection):
 
 def plot_3d_bbox_in_image(ax, detection, calib, fill=False):
     """
-    Projects and draws a 3D bounding box onto a given axes
+    Projects and draws a 3D bounding box onto a given axes.
+    Assumption: all corners of the box are in front of the image plane.
+
     Args:
         ax: axes to plot on
         detection: detection dictionary
@@ -181,6 +183,7 @@ def plot_3d_bbox_in_image(ax, detection, calib, fill=False):
 
     for f in faces:
         verts = corners_2d[:, f]
+
         p = patches.Polygon(verts.T, color=colormap[detection['label']], fill=fill, alpha=0.2, linewidth=3)
         ax.add_patch(p)
 
@@ -222,20 +225,19 @@ def plot_lidar_in_image(ax, points, calib, img_width, img_height, point_size=8):
 
     ax.scatter(points_2d[0,idx], points_2d[1,idx], s=point_size, c=reflectivity[idx], alpha=0.7)
 
-def plot_lidar_in_3d(ax, points, point_size=8, subsample=16):
+def plot_lidar_in_3d(ax, points, point_size=8, subsample=1, alpha=0.6):
     """
-
+    Plots the subsampled lidar points on a 3d axes.
     Args:
-        ax:
-        points:
-        point_size:
-        subsample:
-
-    Returns:
+        ax: axes to plot on
+        points: nx4 numpy array containing x,y,z,intensity values
+        point_size: the marker size in points**2
+        subsample: every nth point is used for plotting. Use subsample=1 to plot every point.
+        alpha: float for the transparency value (alpha)
 
     """
-    points = points[0::4,:subsample]
-    ax.scatter(points[:,0], points[:,1], points[:,2], s=point_size, c=points[:,3], alpha=0.6)
+    points = points[0::subsample, :]
+    ax.scatter(points[:,0], points[:,1], points[:,2], s=point_size, c=points[:,3], alpha=alpha)
 
 def plot_info(ax, detection):
     """
@@ -297,6 +299,18 @@ def plot_frame_2d(ax, frame, show_image=True, show_2d=True, show_3d=False, show_
     return ax
 
 def plot_3d_bbox_in_3d(ax, detection, calib, fill=False):
+    """
+    Plots a 3d bounding box into a 3d axes.
+
+    Args:
+        ax: axes to plot on
+        detection: detection dictionary
+        calib: calibration dictionary
+        fill: True if the faces of the 3d bbox should be filled
+
+    Returns:
+
+    """
     # 3d corners of bounding box
     corners_3d_cam = create_3d_bbox(detection)
 
@@ -322,12 +336,22 @@ def plot_3d_bbox_in_3d(ax, detection, calib, fill=False):
         ax.add_collection3d(pc)
 
 
-def plot_frame_3d(ax, frame, show_3d=True, show_lidar=True, show_info=True):
+def plot_frame_3d(ax, frame, show_3d=True, show_lidar=True, show_info=True, subsample=4):
+    """
+    Function to visualize a complete frame on a 3d axes.
 
+    Args:
+        ax: 3d axes to plot on
+        frame: frame which should be visualized
+        show_3d: if True, the bounding boxes are plotted
+        show_lidar: if True, the lidar points are plotted
+        show_info: if True, labels for the bounding boxes are displayed Todo: not implemented
+
+    """
 
     if show_lidar:
         lidar = kitti_reader.KITTIFrameReader.get_velodyne(frame)
-        plot_lidar_in_3d(ax, lidar, subsample=100, point_size=2)
+        plot_lidar_in_3d(ax, lidar, point_size=2, subsample=subsample)
 
     for d in frame['detections']:
         if show_3d:
